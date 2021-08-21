@@ -1,0 +1,54 @@
+{
+open FSharp.Text.Lexing
+open SlothSQL.Parser.Util
+
+let text (lexbuf: LexBuffer<_>) =
+  LexBuffer<_>.LexemeString lexbuf
+
+let int (lexbuf: LexBuffer<_>) =
+  let s = LexBuffer<_>.LexemeString lexbuf
+  int s
+
+let dummyInfo = Info.UNKNOWN
+
+let printError (i: Info) =
+  match i with
+  | Info.UNKNOWN -> "ParseError at unknown position!"
+  | Info.FI(_, l, c) -> "ParseError at line " + (string l) + " , offset " + (string c)
+
+let keywords : Map<string,(Info -> Parser.token)> =
+  [("SELECT", fun i -> Parser.SELECT i);
+    ("FROM", fun i -> Parser.FROM i);
+    ("WHERE", fun i -> Parser.WHERE i)]
+  |> Map.ofList
+
+// Looks up the build function from our hash table
+// or creates an arbitrary ID:
+let createId i s =
+  match Map.tryFind s keywords with
+  | Some f -> f i
+  | None -> Parser.ID s
+}
+
+// auxiliary tokens:
+let char        = ['a'-'z' 'A'-'Z']
+let digit       = ['0'-'9']
+let whitespace  = [' ' '\t' ]
+let newline     = ('\n' | '\r' '\n')
+let arrow       = '→'
+let bigsigma    = 'Σ'
+let universe    = 'U'
+
+// tokenizer rules:
+rule tokenstream = parse
+| char+ ('-' char+)*    { createId (info lexbuf) (text lexbuf) }
+| digit+                { Parser.INTV (int lexbuf) }
+| "'"                   { Parser.TICK (info lexbuf) }
+| "("                   { Parser.LPAREN (info lexbuf) }
+| ")"                   { Parser.RPAREN (info lexbuf) }
+| "."                   { Parser.DOT (info lexbuf) }
+| ";"                   { Parser.SEMICOLON (info lexbuf) }
+| whitespace            { tokenstream lexbuf }
+| newline               { lexbuf.StartPos <- lexbuf.StartPos.NextLine; tokenstream lexbuf }
+| eof                   { Parser.EOF (info lexbuf) }
+| _                     { failwith (printError (info lexbuf)) }

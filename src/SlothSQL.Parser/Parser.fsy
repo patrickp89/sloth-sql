@@ -1,0 +1,44 @@
+%{
+open SlothSQL.Parser.Syntax
+open SlothSQL.Parser.Util
+%}
+
+// tokens:
+%token <Info> SELECT
+%token <Info> FROM
+%token <Info> WHERE
+
+// identifier:
+%token <string> ID
+%token <int> INTV
+// TODO: identifiers should be of type <string * Info> etc.!
+
+// symbols:
+%token <Info> LPAREN
+%token <Info> RPAREN
+%token <Info> SEMICOLON
+%token <Info> TICK
+%token <Info> DOT
+%token <Info> EOF
+
+// the parser returns a Syntax.SqlSelectQuery:
+%start start
+%type <SqlSelectQuery> start
+
+%%
+
+start: query EOF											{ $1 }
+
+query:
+	| SELECT selectClause FROM fromClause WHERE whereClause	{ SelectFromWhere ($2, $4, $6) }
+	| SELECT selectClause FROM fromClause					{ SelectFrom ($2, $4) }
+
+selectClause:
+	| ID DOT ID												{ QualifiedColumnExpr ($1, $3) }
+	| ID													{ NonQualifiedColumnExpr ($1) }
+
+fromClause:
+	| ID													{ $1 }
+
+whereClause:
+	| ID													{ $1 }

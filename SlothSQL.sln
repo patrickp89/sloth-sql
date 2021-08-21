@@ -9,6 +9,8 @@ Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "SlothSQL.Client", "src\Slot
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "SlothSQL.Test", "src\SlothSQL.Test\SlothSQL.Test.fsproj", "{C90B2EA1-9ACD-4D7C-8941-790650758A40}"
 EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "SlothSQL.Parser", "src\SlothSQL.Parser\SlothSQL.Parser.fsproj", "{CC016A66-6EFA-4904-9B15-7C170E271125}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -43,6 +45,18 @@ Global
 		{C90B2EA1-9ACD-4D7C-8941-790650758A40}.Release|x64.Build.0 = Release|Any CPU
 		{C90B2EA1-9ACD-4D7C-8941-790650758A40}.Release|x86.ActiveCfg = Release|Any CPU
 		{C90B2EA1-9ACD-4D7C-8941-790650758A40}.Release|x86.Build.0 = Release|Any CPU
+		{CC016A66-6EFA-4904-9B15-7C170E271125}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CC016A66-6EFA-4904-9B15-7C170E271125}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CC016A66-6EFA-4904-9B15-7C170E271125}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{CC016A66-6EFA-4904-9B15-7C170E271125}.Debug|x64.Build.0 = Debug|Any CPU
+		{CC016A66-6EFA-4904-9B15-7C170E271125}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{CC016A66-6EFA-4904-9B15-7C170E271125}.Debug|x86.Build.0 = Debug|Any CPU
+		{CC016A66-6EFA-4904-9B15-7C170E271125}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CC016A66-6EFA-4904-9B15-7C170E271125}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CC016A66-6EFA-4904-9B15-7C170E271125}.Release|x64.ActiveCfg = Release|Any CPU
+		{CC016A66-6EFA-4904-9B15-7C170E271125}.Release|x64.Build.0 = Release|Any CPU
+		{CC016A66-6EFA-4904-9B15-7C170E271125}.Release|x86.ActiveCfg = Release|Any CPU
+		{CC016A66-6EFA-4904-9B15-7C170E271125}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -50,6 +64,7 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{1481BBD6-A6DA-4912-A03A-134880D14701} = {87F6C079-CBD7-4866-BDEB-CBDEA9E51D2A}
 		{C90B2EA1-9ACD-4D7C-8941-790650758A40} = {87F6C079-CBD7-4866-BDEB-CBDEA9E51D2A}
+		{CC016A66-6EFA-4904-9B15-7C170E271125} = {87F6C079-CBD7-4866-BDEB-CBDEA9E51D2A}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8CFD6033-FB8D-48BE-9628-9D83DC023CAB}

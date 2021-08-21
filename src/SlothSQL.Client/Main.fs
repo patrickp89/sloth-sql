@@ -25,9 +25,9 @@ let testDataFor (model: Model) =
     let q = model.SqlQuery
     printfn "SQL query is: %s" q
     printfn "Parsing query..."
-    let parseResult = generateTestData q
-    printfn "Parse result is: %s" parseResult
-    [parseResult]
+    let testData = generateTestData q
+    printfn "Test data is: %A" testData
+    testData
 
 
 let update message model =
