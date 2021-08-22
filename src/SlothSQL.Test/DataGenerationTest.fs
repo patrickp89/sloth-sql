@@ -4,45 +4,60 @@ module DataGenerationTest =
 
     open NUnit.Framework
     open SlothSQL.DataGenerator.TestDataGenerator
-    open TSQL.Tokens
 
 
     let testQuery01 =
         "SELECT c.name, o.due_date\nFROM customer c, contract o\nWHERE
         o.fk_customer = c.id AND c.id = 123 AND o.status = 'o';"
-        
+    
+    let testDataRow1 = {
+            Table = "customer";
+            KeysAndValues = [("id", "123", false); ("name", "Jane Doe", true)]
+        }
+    
+    let testDataRow2 = {
+            Table = "contract";
+            KeysAndValues = [
+                ("id", "987", false); ("due_date", "2021-08-15", true);
+                ("status", "0", true); ("fk_customer", "123", false)] 
+        }
+
 
     [<SetUp>]
     let Setup () =
         ()
 
+
     [<Test>]
-    let TestQueryParsing () =
-        let sqlTokens: TSQLToken list = parseQuery testQuery01
-        let expTokenCount = 8 + 6 + 21
-        Assert.That(sqlTokens.Length, Is.EqualTo expTokenCount)
-        Assert.That(sqlTokens.Item(0).Type, Is.EqualTo TSQLTokenType.Keyword)
-        Assert.That(sqlTokens.Item(0).Text, Is.EqualTo "SELECT")
-        Assert.That(sqlTokens.Item(1).Type, Is.EqualTo TSQLTokenType.Identifier)
-        Assert.That(sqlTokens.Item(1).Text, Is.EqualTo "c")
+    let TestInsertStatementGeneration () =
+        let expInsertStatement = "INSERT INTO customer (id, name) VALUES (123, 'Jane Doe');"
+        Assert.That(toInsertStatement testDataRow1, Is.EqualTo expInsertStatement)
+        
+        let expInsertStatement2 =
+            "INSERT INTO contract (id, due_date, status, fk_customer)"
+            + " VALUES (987, '2021-08-15', '0', 123);"
+        Assert.That(toInsertStatement testDataRow2, Is.EqualTo expInsertStatement2)
 
 
     [<Test>]
-    let TestStatemtClausesExtraction () =
-        let sqlTokens = parseQuery testQuery01
-        let clauses: SqlSelectStatement = extractSqlClauses sqlTokens
-        Assert.That(clauses.SelectClause.IsSome, Is.EqualTo true)
-        Assert.That(clauses.SelectClause.Value.Length, Is.EqualTo 8)
-        Assert.That(clauses.FromClause.IsSome, Is.EqualTo true)
-        Assert.That(clauses.FromClause.Value.Length, Is.EqualTo 6)
-        Assert.That(clauses.WhereClause.IsSome, Is.EqualTo true)
-        Assert.That(clauses.WhereClause.Value.Length, Is.EqualTo 21)
-
-    [<Test>]
-    let TestDataGeneration () =
-        let testData: string list = generateTestData testQuery01
+    let TestInsertStatementsGeneration () =
+        let testData = buildInsertStatementList [testDataRow1; testDataRow2]
         let expTestData = [
-            "INSERT INTO customer (id, name) VALUES (id, 'Jane Doe');"
+            "INSERT INTO customer (id, name) VALUES (123, 'Jane Doe');"
             "INSERT INTO contract (id, due_date, status, fk_customer) VALUES (987, '2021-08-15', '0', 123);"
         ]
         Assert.That(testData, Is.EquivalentTo expTestData)
+
+
+(*
+    [<Test>]
+    let TestDataGeneration () =
+        let testData: Result<string list, string> = generateTestData testQuery01
+        let expTestData = [
+            "INSERT INTO customer (id, name) VALUES (123, 'Jane Doe');"
+            "INSERT INTO contract (id, due_date, status, fk_customer) VALUES (987, '2021-08-15', '0', 123);"
+        ]
+        match testData with
+        | Ok t -> Assert.That(t, Is.EquivalentTo expTestData)
+        | Error e -> Assert.Fail(e)
+*)

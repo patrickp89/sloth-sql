@@ -35,19 +35,17 @@ let char        = ['a'-'z' 'A'-'Z']
 let digit       = ['0'-'9']
 let whitespace  = [' ' '\t' ]
 let newline     = ('\n' | '\r' '\n')
-let arrow       = '→'
-let bigsigma    = 'Σ'
-let universe    = 'U'
 
 // tokenizer rules:
 rule tokenstream = parse
-| char+ ('-' char+)*    { createId (info lexbuf) (text lexbuf) }
+| char+ (('-' | '_') char+)*    { createId (info lexbuf) (text lexbuf) }
 | digit+                { Parser.INTV (int lexbuf) }
 | "'"                   { Parser.TICK (info lexbuf) }
 | "("                   { Parser.LPAREN (info lexbuf) }
 | ")"                   { Parser.RPAREN (info lexbuf) }
 | "."                   { Parser.DOT (info lexbuf) }
 | ";"                   { Parser.SEMICOLON (info lexbuf) }
+| ","                   { Parser.COLON (info lexbuf) }
 | whitespace            { tokenstream lexbuf }
 | newline               { lexbuf.StartPos <- lexbuf.StartPos.NextLine; tokenstream lexbuf }
 | eof                   { Parser.EOF (info lexbuf) }

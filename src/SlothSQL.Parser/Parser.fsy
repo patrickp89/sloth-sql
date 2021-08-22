@@ -17,6 +17,7 @@ open SlothSQL.Parser.Util
 %token <Info> LPAREN
 %token <Info> RPAREN
 %token <Info> SEMICOLON
+%token <Info> COLON
 %token <Info> TICK
 %token <Info> DOT
 %token <Info> EOF
@@ -34,6 +35,10 @@ query:
 	| SELECT selectClause FROM fromClause					{ SelectFrom ($2, $4) }
 
 selectClause:
+	| columnExpr COLON columnExpr							{ [$1; $3] }
+	| columnExpr											{ [$1] }
+
+columnExpr:
 	| ID DOT ID												{ QualifiedColumnExpr ($1, $3) }
 	| ID													{ NonQualifiedColumnExpr ($1) }
 

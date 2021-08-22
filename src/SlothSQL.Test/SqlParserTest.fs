@@ -17,10 +17,10 @@ module SqlParserTest =
     let TestSimpleQueryParsing () =
         let exp: SqlSelectQuery =
             SelectFrom (
-                QualifiedColumnExpr ("c", "name"),
+                [QualifiedColumnExpr ("c", "name")],
                 ("customer")
             )
-        let sqlSelectQuery: Result<SqlSelectQuery,string> = parse testSimpleQuery01
+        let sqlSelectQuery: Result<SqlSelectQuery, string> = parse testSimpleQuery01
         match sqlSelectQuery with
         | Ok q -> Assert.That(q, Is.EqualTo exp)
         | Error e -> Assert.Fail(e)

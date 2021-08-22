@@ -11,10 +11,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="TSQL.Parser" Version="1.5.2" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\SlothSQL.Parser\SlothSQL.Parser.fsproj" />
   </ItemGroup>
 

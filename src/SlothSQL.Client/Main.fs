@@ -23,11 +23,14 @@ type Message =
 
 let testDataFor (model: Model) =
     let q = model.SqlQuery
-    printfn "SQL query is: %s" q
-    printfn "Parsing query..."
-    let testData = generateTestData q
-    printfn "Test data is: %A" testData
-    testData
+    printfn "Parsing SQL query: '%s' ..." q
+    match generateTestData q  with
+    | Ok t ->
+        printfn "Test data is: %A" t
+        t
+    | Error e ->
+        printfn "Could not generate data! %A" e
+        []
 
 
 let update message model =

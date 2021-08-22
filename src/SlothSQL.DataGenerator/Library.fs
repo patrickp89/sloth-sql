@@ -2,49 +2,60 @@
 
 module TestDataGenerator =
 
-    open TSQL
-    open TSQL.Tokens
+    open SlothSQL.Parser.SqlParser
+    open SlothSQL.Parser.Syntax
 
-
-    type SqlSelectStatement = {
-        SelectClause: TSQLToken list option
-        FromClause: TSQLToken list option
-        WhereClause: TSQLToken list option
+    type TestDataRow = {
+        Table: string;
+        KeysAndValues: (string * string * bool) list
     }
 
 
-    let parseQuery query: TSQLToken list =
-        List.ofSeq (TSQLTokenizer.ParseTokens query)
+    let extractColumnDetails (sq: SqlSelectQuery) =
+        //for tn in sqlTokens do
+        //    printfn "%s      %A" tn.Text tn.Type
+
+        // TODO: ...
+
+        // default result, just while developing:
+        let row1 = {
+            Table = "customer";
+            KeysAndValues = [("id", "123", false); ("name", "Jane Doe", true)]
+        }
+
+        let row2 = {
+            Table = "contract";
+            KeysAndValues = [
+                ("id", "987", false); ("due_date", "2021-08-15", true);
+                ("status", "0", true); ("fk_customer", "123", false)] 
+        }
+        [row1; row2]
 
 
-    let extractSqlClause (sqlTokens: TSQLToken list) (startToken: string) (endToken: string) =
-        let clause =
-            sqlTokens
-            |> List.skipWhile (fun t -> not(t.Type.Equals TSQLTokenType.Keyword && t.Text.Equals startToken))
-            |> List.takeWhile (fun t -> not(t.Type.Equals TSQLTokenType.Keyword && t.Text.Equals endToken))
-        printfn "\n%s clause:" startToken
-        for tn in (clause |> List.map (fun t -> t.Text)) do
-            printfn "%s" tn
-        clause
+    let private concat f (keyValueList: (string * string * bool) list) =
+        let l =
+            keyValueList
+            |> List.map f
+            |> List.fold (fun acc elem -> (acc + elem)) "("
+        
+        // get rid of the last ", " and add a ")":
+        let i = l.Length - 3
+        l.[0..i] + ")"
 
 
-    let extractSqlClauses (sqlTokens: TSQLToken list): SqlSelectStatement = {
-        SelectClause = Some (extractSqlClause sqlTokens "SELECT" "FROM")
-        FromClause = Some (extractSqlClause sqlTokens "FROM" "WHERE")
-        WhereClause = Some (extractSqlClause sqlTokens "WHERE" "ORDER") // TODO: could be "GROUP", too!
-    }
+    let toInsertStatement (tdr: TestDataRow) =
+        let {Table=t; KeysAndValues=keyValueList} = tdr
+        let columns = keyValueList |> concat (fun (k, _, _) -> (k + ", "))
+        let values = keyValueList |> concat (fun (_, v, b) -> if b then ("'" + v + "', ") else (v + ", "))
+        "INSERT INTO " + t + " " + columns + " VALUES " + values + ";"
 
 
-    let generateTestData query: string list =
-        // parse the given SQL query:
-        let sqlTokens = parseQuery query
-        for tn in sqlTokens do
-            printfn "%s      %A" tn.Text tn.Type
+    let buildInsertStatementList (testDataRows: TestDataRow list) =
+        testDataRows
+        |> List.map toInsertStatement
 
-        // the parser returns a list, we therefore need to
-        // extract the different SQL clauses manually:
-        let clauses = extractSqlClauses sqlTokens
-        [
-            "INSERT INTO customer (id, name) VALUES (id, 'Jane Doe');"
-            "INSERT INTO contract (id, due_date, status, fk_customer) VALUES (987, '2021-08-15', '0', 123);"
-        ]
+
+    let generateTestData query: Result<string list, string> =
+        parse query
+            |> Result.map extractColumnDetails
+            |> Result.map buildInsertStatementList 

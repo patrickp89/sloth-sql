@@ -6,7 +6,7 @@ module Syntax =
     | NonQualifiedColumnExpr of string // e.g. "age"
     | QualifiedColumnExpr of string * string // e.g. "customer.age"
 
-    type SelectClause = ColumnExpr // TODO: ColumnExpr list
+    type SelectClause = ColumnExpr list
 
     type FromClause = string
 
