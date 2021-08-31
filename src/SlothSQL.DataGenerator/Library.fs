@@ -11,10 +11,14 @@ module TestDataGenerator =
     }
 
 
-    let extractColumnDetails (sq: SqlSelectQuery) =
+    let extractColumnDetails (q: SqlSelectQuery) =
         //for tn in sqlTokens do
         //    printfn "%s      %A" tn.Text tn.Type
 
+        let selectClause =
+            match q with
+            | SelectFrom (sc, _) -> sc
+            | SelectFromWhere (sc, _, _) -> sc
         // TODO: ...
 
         // default result, just while developing:

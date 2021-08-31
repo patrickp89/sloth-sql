@@ -6,9 +6,11 @@ module Syntax =
     | NonQualifiedColumnExpr of string // e.g. "age"
     | QualifiedColumnExpr of string * string // e.g. "customer.age"
 
-    type SelectClause = ColumnExpr list
+    type SelectClause =
+    | Columns of ColumnExpr list
+    | Wildcard
 
-    type FromClause = string
+    type FromClause = string list // TODO: use a type TableExpr instead of string!
 
     type WhereClause = string
 

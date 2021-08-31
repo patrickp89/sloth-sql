@@ -9,6 +9,9 @@ module DataGenerationTest =
     let testQuery01 =
         "SELECT c.name, o.due_date\nFROM customer c, contract o\nWHERE
         o.fk_customer = c.id AND c.id = 123 AND o.status = 'o';"
+
+    let testQuery02 =
+        "SELECT c.name, o.due_date FROM customer c, contract o;"
     
     let testDataRow1 = {
             Table = "customer";
@@ -49,9 +52,20 @@ module DataGenerationTest =
         Assert.That(testData, Is.EquivalentTo expTestData)
 
 
-(*
     [<Test>]
     let TestDataGeneration () =
+        let testData: Result<string list, string> = generateTestData testQuery02
+        let expTestData = [
+            "INSERT INTO customer (id, name) VALUES (123, 'Jane Doe');"
+            "INSERT INTO contract (id, due_date, status, fk_customer) VALUES (987, '2021-08-15', '0', 123);"
+        ]
+        match testData with
+        | Ok t -> Assert.That(t, Is.EquivalentTo expTestData)
+        | Error e -> Assert.Fail(e)
+
+(*
+    [<Test>]
+    let TestDataGeneration2 () =
         let testData: Result<string list, string> = generateTestData testQuery01
         let expTestData = [
             "INSERT INTO customer (id, name) VALUES (123, 'Jane Doe');"
