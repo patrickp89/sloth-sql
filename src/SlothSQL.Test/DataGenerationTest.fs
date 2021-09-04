@@ -6,13 +6,6 @@ module DataGenerationTest =
     open SlothSQL.DataGenerator.TestDataGenerator
 
 
-    let testQuery01 =
-        "SELECT c.name, o.due_date\nFROM customer c, contract o\nWHERE
-        o.fk_customer = c.id AND c.id = 123 AND o.status = 'o';"
-
-    let testQuery02 =
-        "SELECT c.name, o.due_date FROM customer c, contract o;"
-    
     let testDataRow1 = {
             Table = "customer";
             KeysAndValues = [("id", "123", false); ("name", "Jane Doe", true)]
@@ -54,6 +47,8 @@ module DataGenerationTest =
 
     [<Test>]
     let TestDataGeneration () =
+        let testQuery02 =
+            "SELECT c.name, o.due_date FROM customer c, contract o;"
         let testData: Result<string list, string> = generateTestData testQuery02
         let expTestData = [
             "INSERT INTO customer (id, name) VALUES (123, 'Jane Doe');"
@@ -66,6 +61,9 @@ module DataGenerationTest =
 (*
     [<Test>]
     let TestDataGeneration2 () =
+        let testQuery =
+            "SELECT c.name, o.due_date FROM customer c, contract o "
+            + "WHERE o.fk_customer = c.id AND c.id = 123 AND o.status = 'o';"
         let testData: Result<string list, string> = generateTestData testQuery01
         let expTestData = [
             "INSERT INTO customer (id, name) VALUES (123, 'Jane Doe');"

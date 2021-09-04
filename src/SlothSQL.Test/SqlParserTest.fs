@@ -7,15 +7,11 @@ module SqlParserTest =
     open SlothSQL.Parser.Syntax
 
 
-    let testSimpleQuery01 =
-        "SELECT c.name FROM customer;"
-    
-    let testQuery02 =
-        "SELECT c.name, o.due_date FROM customer c, contract o;"
-    
-    let testQuery03 =
-        "SELECT c.id, c.name, o.due_date FROM customer c, contract o;"
-    
+    let assertParsedQueryOk (sqlSelectQuery: Result<SqlSelectQuery, string>) (exp: SqlSelectQuery) =
+        match sqlSelectQuery with
+        | Ok q -> Assert.That(q, Is.EqualTo exp)
+        | Error e -> Assert.Fail(e)
+
 
     [<SetUp>]
     let Setup () =
@@ -24,19 +20,21 @@ module SqlParserTest =
 
     [<Test>]
     let TestSimpleQueryParsing () =
+        let simpleTestQuery01 =
+            "SELECT name FROM customer;"
         let exp: SqlSelectQuery =
             SelectFrom (
-                Columns [QualifiedColumnExpr ("c", "name")],
+                Columns [NonQualifiedColumnExpr "name"],
                 ["customer"]
             )
-        let sqlSelectQuery: Result<SqlSelectQuery, string> = parse testSimpleQuery01
-        match sqlSelectQuery with
-        | Ok q -> Assert.That(q, Is.EqualTo exp)
-        | Error e -> Assert.Fail(e)
+        let sqlSelectQuery: Result<SqlSelectQuery, string> = parse simpleTestQuery01
+        assertParsedQueryOk sqlSelectQuery exp
 
 
     [<Test>]
-    let Test2QualifTablesParsing () =
+    let TestQualifiedColumnNamesParsing () =
+        let qualifiedColumnNamesTestQuery01 =
+            "SELECT c.name, o.due_date FROM customer c, contract o;"
         let exp: SqlSelectQuery =
             SelectFrom (
                 Columns [
@@ -45,14 +43,14 @@ module SqlParserTest =
                 ],
                 ["customer"; "contract"]
             )
-        let sqlSelectQuery: Result<SqlSelectQuery, string> = parse testQuery02
-        match sqlSelectQuery with
-        | Ok q -> Assert.That(q, Is.EqualTo exp)
-        | Error e -> Assert.Fail(e)
+        let sqlSelectQuery: Result<SqlSelectQuery, string> = parse qualifiedColumnNamesTestQuery01
+        assertParsedQueryOk sqlSelectQuery exp
 
 
     [<Test>]
-    let Test3QualifTablesParsing () =
+    let TestMultipleQualifColumnNamesParsing () =
+        let qualifiedColumnNamesTestQuery02 =
+            "SELECT c.id, c.name, o.due_date FROM customer c, contract o;"
         let exp: SqlSelectQuery =
             SelectFrom (
                 Columns [
@@ -62,7 +60,52 @@ module SqlParserTest =
                 ],
                 ["customer"; "contract"]
             )
-        let sqlSelectQuery: Result<SqlSelectQuery, string> = parse testQuery03
-        match sqlSelectQuery with
-        | Ok q -> Assert.That(q, Is.EqualTo exp)
-        | Error e -> Assert.Fail(e)
+        let sqlSelectQuery: Result<SqlSelectQuery, string> = parse qualifiedColumnNamesTestQuery02
+        assertParsedQueryOk sqlSelectQuery exp
+
+
+    [<Test>]
+    let TestSimpleWhereClauseParsing () =
+        let whereClauseTestQuery01 =
+            "SELECT c.id, c.name, o.due_date FROM customer c, contract o WHERE o.fk_customer = c.id;"
+        let exp: SqlSelectQuery =
+            SelectFromWhere (
+                Columns [
+                    QualifiedColumnExpr ("c", "id");
+                    QualifiedColumnExpr ("c", "name");
+                    QualifiedColumnExpr ("o", "due_date")
+                ],
+                ["customer"; "contract"],
+                Filters [
+                    EqualsColumnExpr
+                        (QualifiedColumnExpr ("o", "fk_customer"),
+                        QualifiedColumnExpr ("c", "id"))
+                ]
+            )
+        let sqlSelectQuery: Result<SqlSelectQuery, string> = parse whereClauseTestQuery01
+        assertParsedQueryOk sqlSelectQuery exp
+
+
+    [<Test>]
+    let TesteWhereClauseWithConstantParsing () =
+        let whereClauseTestQuery01 =
+            "SELECT c.name, o.due_date FROM customer c, contract o "
+            + "WHERE o.fk_customer = c.id AND c.id = 123;"
+        let exp: SqlSelectQuery =
+            SelectFromWhere (
+                Columns [
+                    QualifiedColumnExpr ("c", "name");
+                    QualifiedColumnExpr ("o", "due_date")
+                ],
+                ["customer"; "contract"],
+                Filters [
+                    EqualsColumnExpr
+                        (QualifiedColumnExpr ("o", "fk_customer"),
+                        QualifiedColumnExpr ("c", "id"));
+                    EqualsIntExpr
+                        (QualifiedColumnExpr ("c", "id"),
+                        123)
+                ]
+            )
+        let sqlSelectQuery: Result<SqlSelectQuery, string> = parse whereClauseTestQuery01
+        assertParsedQueryOk sqlSelectQuery exp

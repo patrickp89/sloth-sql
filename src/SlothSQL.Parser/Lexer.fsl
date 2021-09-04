@@ -19,7 +19,8 @@ let printError (i: Info) =
 let keywords : Map<string,(Info -> Parser.token)> =
   [("SELECT", fun i -> Parser.SELECT i);
     ("FROM", fun i -> Parser.FROM i);
-    ("WHERE", fun i -> Parser.WHERE i)]
+    ("WHERE", fun i -> Parser.WHERE i);
+    ("AND", fun i -> Parser.AND i)]
   |> Map.ofList
 
 // Looks up the build function from our hash table
@@ -40,12 +41,14 @@ let newline     = ('\n' | '\r' '\n')
 rule tokenstream = parse
 | char+ (('-' | '_') char+)*    { createId (info lexbuf) (text lexbuf) }
 | digit+                { Parser.INTV (int lexbuf) }
+| "="                   { Parser.EQUALSSIGN (info lexbuf) }
 | "'"                   { Parser.TICK (info lexbuf) }
 | "("                   { Parser.LPAREN (info lexbuf) }
 | ")"                   { Parser.RPAREN (info lexbuf) }
 | "."                   { Parser.DOT (info lexbuf) }
 | ";"                   { Parser.SEMICOLON (info lexbuf) }
 | ","                   { Parser.COLON (info lexbuf) }
+| "*"                   { Parser.ASTERISK (info lexbuf) }
 | whitespace            { tokenstream lexbuf }
 | newline               { lexbuf.StartPos <- lexbuf.StartPos.NextLine; tokenstream lexbuf }
 | eof                   { Parser.EOF (info lexbuf) }
