@@ -50,12 +50,15 @@ columnExpr:
 	| ID													{ NonQualifiedColumnExpr ($1) }
 
 fromClause:
-	| tableExpr COLON tableExpr								{ [$1; $3] } // TODO: more than just 2!
+	| tableExpressions										{ Tables (List.rev $1) }
+
+tableExpressions:
+	| tableExpressions COLON tableExpr						{ $3 :: $1 }
 	| tableExpr												{ [$1] }
 
 tableExpr:
-	| ID ID													{ $1 } // e.g. FROM ... contract c
-	| ID													{ $1 } // e.g. FROM ... contract
+	| ID ID													{ TableAliasExpr ($1, $2) } // e.g. FROM ... contract c
+	| ID													{ NonAliasTableExpr ($1) } // e.g. FROM ... contract
 
 whereClause:
 	| filterExpressions										{ Filters (List.rev $1) }

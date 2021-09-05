@@ -11,15 +11,69 @@ module TestDataGenerator =
     }
 
 
-    let extractColumnDetails (q: SqlSelectQuery) =
-        //for tn in sqlTokens do
-        //    printfn "%s      %A" tn.Text tn.Type
+    let toTableName (tableExpr: TableExpr) =
+        match tableExpr with
+        | NonAliasTableExpr (t) -> t
+        | TableAliasExpr (t, _) -> t
 
+
+    let extractTableNames (fromClause: FromClause) =
+        match fromClause with
+        | Tables (tl) ->
+            tl
+            |> List.map toTableName
+
+
+    let columnExprToColumnName (ce: ColumnExpr) =
+        match ce with
+        | NonQualifiedColumnExpr (cn) -> "" + cn // TODO: concat the (single) "global" table name!
+        | QualifiedColumnExpr (tn, cn) -> tn + "." + cn
+
+
+    let filterExprToColumnNames fe =
+        match fe with
+        | EqualsColumnExpr (c1, c2) -> seq { (columnExprToColumnName c1); (columnExprToColumnName c2) }
+        | EqualsIntExpr (c, _) -> seq { (columnExprToColumnName c) }
+
+
+    let extractCols (wc: WhereClause) =
+        match wc with
+        | Filters (fltrs) ->
+            fltrs
+            |> Seq.ofList
+            |> Seq.collect filterExprToColumnNames
+            |> Seq.distinct
+            |> Seq.toList
+            |> List.sort
+
+
+    let extractColumnDetails (q: SqlSelectQuery) =
         let selectClause =
             match q with
             | SelectFrom (sc, _) -> sc
             | SelectFromWhere (sc, _, _) -> sc
-        // TODO: ...
+        
+        let fromClause =
+            match q with
+            | SelectFrom (_, fc) -> fc
+            | SelectFromWhere (_, fc, _) -> fc
+
+        let whereClause =
+            match q with
+            | SelectFrom (_) -> None
+            | SelectFromWhere (_, _, wc) -> Some wc
+        
+        let fromClauseTableNames = fromClause |> extractTableNames
+        let joinClausesTableNames = [] // TODO!
+        let distinctTableNames = List.append fromClauseTableNames joinClausesTableNames
+
+        let whereClauseCols =
+            whereClause
+            |> Option.map extractCols
+            |> Option.defaultValue []
+        
+        // map the column aliases to their proper names:
+        let allCols = List.append [] whereClauseCols // TODO: append select cols
 
         // default result, just while developing:
         let row1 = {

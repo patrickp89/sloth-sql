@@ -25,7 +25,7 @@ module SqlParserTest =
         let exp: SqlSelectQuery =
             SelectFrom (
                 Columns [NonQualifiedColumnExpr "name"],
-                ["customer"]
+                Tables [NonAliasTableExpr "customer"]
             )
         let sqlSelectQuery: Result<SqlSelectQuery, string> = parse simpleTestQuery01
         assertParsedQueryOk sqlSelectQuery exp
@@ -41,7 +41,10 @@ module SqlParserTest =
                     QualifiedColumnExpr ("c", "name");
                     QualifiedColumnExpr ("o", "due_date")
                 ],
-                ["customer"; "contract"]
+                Tables [
+                    TableAliasExpr ("customer", "c");
+                    TableAliasExpr ("contract", "o")
+                ]
             )
         let sqlSelectQuery: Result<SqlSelectQuery, string> = parse qualifiedColumnNamesTestQuery01
         assertParsedQueryOk sqlSelectQuery exp
@@ -58,7 +61,10 @@ module SqlParserTest =
                     QualifiedColumnExpr ("c", "name");
                     QualifiedColumnExpr ("o", "due_date")
                 ],
-                ["customer"; "contract"]
+                Tables [
+                    TableAliasExpr ("customer", "c");
+                    TableAliasExpr ("contract", "o")
+                ]
             )
         let sqlSelectQuery: Result<SqlSelectQuery, string> = parse qualifiedColumnNamesTestQuery02
         assertParsedQueryOk sqlSelectQuery exp
@@ -75,7 +81,10 @@ module SqlParserTest =
                     QualifiedColumnExpr ("c", "name");
                     QualifiedColumnExpr ("o", "due_date")
                 ],
-                ["customer"; "contract"],
+                Tables [
+                    TableAliasExpr ("customer", "c");
+                    TableAliasExpr ("contract", "o")
+                ],
                 Filters [
                     EqualsColumnExpr
                         (QualifiedColumnExpr ("o", "fk_customer"),
@@ -97,7 +106,10 @@ module SqlParserTest =
                     QualifiedColumnExpr ("c", "name");
                     QualifiedColumnExpr ("o", "due_date")
                 ],
-                ["customer"; "contract"],
+                Tables [
+                    TableAliasExpr ("customer", "c");
+                    TableAliasExpr ("contract", "o")
+                ],
                 Filters [
                     EqualsColumnExpr
                         (QualifiedColumnExpr ("o", "fk_customer"),

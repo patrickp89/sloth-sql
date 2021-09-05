@@ -4,18 +4,25 @@ module DataGenerationTest =
 
     open NUnit.Framework
     open SlothSQL.DataGenerator.TestDataGenerator
+    open SlothSQL.Parser.Syntax
 
 
     let testDataRow1 = {
             Table = "customer";
-            KeysAndValues = [("id", "123", false); ("name", "Jane Doe", true)]
+            KeysAndValues = [
+                ("id", "123", false);
+                ("name", "Jane Doe", true)
+            ]
         }
     
     let testDataRow2 = {
             Table = "contract";
             KeysAndValues = [
-                ("id", "987", false); ("due_date", "2021-08-15", true);
-                ("status", "0", true); ("fk_customer", "123", false)] 
+                ("id", "987", false);
+                ("due_date", "2021-08-15", true);
+                ("status", "0", true);
+                ("fk_customer", "123", false)
+            ]
         }
 
 
@@ -43,6 +50,34 @@ module DataGenerationTest =
             "INSERT INTO contract (id, due_date, status, fk_customer) VALUES (987, '2021-08-15', '0', 123);"
         ]
         Assert.That(testData, Is.EquivalentTo expTestData)
+
+
+    [<Test>]
+    let TestWhereClauseColumnExtraction () =
+        let testWhereClause =
+            Filters [
+                    EqualsColumnExpr
+                        (QualifiedColumnExpr ("o", "fk_customer"),
+                        QualifiedColumnExpr ("c", "id"));
+                    EqualsIntExpr
+                        (QualifiedColumnExpr ("c", "id"),
+                        123)
+            ]
+        let cols = extractCols testWhereClause
+        let expCols = ["c.id"; "o.fk_customer"]
+        Assert.That(cols, Is.EquivalentTo expCols)
+
+
+    [<Test>]
+    let TestTableNameExtraction () =
+        let testFromClause =
+            Tables [
+                    TableAliasExpr ("customer", "c");
+                    TableAliasExpr ("contract", "o")
+            ]
+        let namez = extractTableNames testFromClause
+        let expTableNames = ["customer"; "contract"]
+        Assert.That(namez, Is.EquivalentTo expTableNames)
 
 
     [<Test>]
