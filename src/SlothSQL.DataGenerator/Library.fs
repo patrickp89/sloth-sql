@@ -24,7 +24,7 @@ module TestDataGenerator =
             |> List.map toTableName
 
 
-    let columnExprToColumnName (ce: ColumnExpr) =
+    let columnExprToColumnName ce =
         match ce with
         | NonQualifiedColumnExpr (cn) -> "" + cn // TODO: concat the (single) "global" table name!
         | QualifiedColumnExpr (tn, cn) -> tn + "." + cn
@@ -36,15 +36,57 @@ module TestDataGenerator =
         | EqualsIntExpr (c, _) -> seq { (columnExprToColumnName c) }
 
 
-    let extractCols (wc: WhereClause) =
+    /// Extracts a list of all distinct column names from a
+    /// given "WHERE ..." clause.
+    let extractWhereColumns (wc: WhereClause) =
         match wc with
         | Filters (fltrs) ->
             fltrs
             |> Seq.ofList
             |> Seq.collect filterExprToColumnNames
+            |> Seq.sort
             |> Seq.distinct
             |> Seq.toList
-            |> List.sort
+
+
+    /// Extracts a list of all distinct column names from a
+    /// given "SELECT ..." clause.
+    let extractSelectColumns (sc: SelectClause) =
+        match sc with
+        | Wildcard -> []
+        | Columns (cols) ->
+            cols
+            |> Seq.ofList
+            |> Seq.map columnExprToColumnName
+            |> Seq.sort
+            |> Seq.distinct
+            |> Seq.toList
+
+
+    /// Maps a given table name to a list of triplets where each
+    /// triplet corresponds to a key-value pair (plus a type flag) that
+    /// will be added to the corresponding INSERT statement for this 
+    /// pecific table, e.g.
+    ///   "customer" -> [("id", "123", false); ("name", "Jane Doe", true)]
+    /// which will result in a statement
+    ///   "INSERT INTO customer (id, name) VALUES (123, 'Jane Doe');"
+    let buildKeysAndValues () =
+        // TODO!
+        [
+            ("customer", [("id", "123", false); ("name", "Jane Doe", true)]);
+            ("contract", [("due_date", "2021-08-15", true); ("fk_customer", "123", false)])
+        ] |> Map.ofList
+
+
+    /// Creates a single test data row from a table (name).
+    let toTestDataRow (tableToCols: Map<string, (string * string * bool) list>) (tableName: string) =
+        let keysAndValues =
+            tableToCols.TryFind tableName
+            |> Option.defaultValue []
+        {
+            Table = tableName;
+            KeysAndValues = keysAndValues
+        }
 
 
     let extractColumnDetails (q: SqlSelectQuery) =
@@ -62,34 +104,32 @@ module TestDataGenerator =
             match q with
             | SelectFrom (_) -> None
             | SelectFromWhere (_, _, wc) -> Some wc
-        
-        let fromClauseTableNames = fromClause |> extractTableNames
+
+        // figure out all table names:        
+        let fromClauseTableNames = extractTableNames fromClause
         let joinClausesTableNames = [] // TODO!
         let distinctTableNames = List.append fromClauseTableNames joinClausesTableNames
+        printf "distinct table names: %A\n" distinctTableNames
+
+        // figure out all column names:
+        let selectClauseCols = extractSelectColumns selectClause
 
         let whereClauseCols =
             whereClause
-            |> Option.map extractCols
+            |> Option.map extractWhereColumns
             |> Option.defaultValue []
         
-        // map the column aliases to their proper names:
-        let allCols = List.append [] whereClauseCols // TODO: append select cols
+        let allCols = List.append selectClauseCols whereClauseCols
+        printf "all column names: %A\n" allCols
 
-        // default result, just while developing:
-        let row1 = {
-            Table = "customer";
-            KeysAndValues = [("id", "123", false); ("name", "Jane Doe", true)]
-        }
-
-        let row2 = {
-            Table = "contract";
-            KeysAndValues = [
-                ("id", "987", false); ("due_date", "2021-08-15", true);
-                ("status", "0", true); ("fk_customer", "123", false)] 
-        }
-        [row1; row2]
+        // now build a single test data row for each table:
+        let tableToCols = buildKeysAndValues ()
+        distinctTableNames
+        |> List.map (toTestDataRow tableToCols)
 
 
+    /// Concats either all keys or all values into a single list of
+    /// keys (or values respectively), e.g. "(a, b, c, d)".
     let private concat f (keyValueList: (string * string * bool) list) =
         let l =
             keyValueList
@@ -101,6 +141,7 @@ module TestDataGenerator =
         l.[0..i] + ")"
 
 
+    /// Assembles a single "INSERT INTO ..." statement.
     let toInsertStatement (tdr: TestDataRow) =
         let {Table=t; KeysAndValues=keyValueList} = tdr
         let columns = keyValueList |> concat (fun (k, _, _) -> (k + ", "))
@@ -108,11 +149,13 @@ module TestDataGenerator =
         "INSERT INTO " + t + " " + columns + " VALUES " + values + ";"
 
 
-    let buildInsertStatementList (testDataRows: TestDataRow list) =
+    let private buildInsertStatementList (testDataRows: TestDataRow list) =
         testDataRows
         |> List.map toInsertStatement
 
 
+    /// Parses a given SQL SELECT query and returns a list
+    /// of INSERT statements.
     let generateTestData query: Result<string list, string> =
         parse query
             |> Result.map extractColumnDetails

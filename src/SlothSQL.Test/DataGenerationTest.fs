@@ -43,16 +43,6 @@ module DataGenerationTest =
 
 
     [<Test>]
-    let TestInsertStatementsGeneration () =
-        let testData = buildInsertStatementList [testDataRow1; testDataRow2]
-        let expTestData = [
-            "INSERT INTO customer (id, name) VALUES (123, 'Jane Doe');"
-            "INSERT INTO contract (id, due_date, status, fk_customer) VALUES (987, '2021-08-15', '0', 123);"
-        ]
-        Assert.That(testData, Is.EquivalentTo expTestData)
-
-
-    [<Test>]
     let TestWhereClauseColumnExtraction () =
         let testWhereClause =
             Filters [
@@ -63,7 +53,19 @@ module DataGenerationTest =
                         (QualifiedColumnExpr ("c", "id"),
                         123)
             ]
-        let cols = extractCols testWhereClause
+        let cols = extractWhereColumns testWhereClause
+        let expCols = ["c.id"; "o.fk_customer"]
+        Assert.That(cols, Is.EquivalentTo expCols)
+
+
+    [<Test>]
+    let TestSelectClauseColumnExtraction () =
+        let testSelectClause =
+            Columns [
+                QualifiedColumnExpr ("o", "fk_customer");
+                QualifiedColumnExpr ("c", "id")
+            ]
+        let cols = extractSelectColumns testSelectClause
         let expCols = ["c.id"; "o.fk_customer"]
         Assert.That(cols, Is.EquivalentTo expCols)
 
@@ -82,24 +84,25 @@ module DataGenerationTest =
 
     [<Test>]
     let TestDataGeneration () =
-        let testQuery02 =
-            "SELECT c.name, o.due_date FROM customer c, contract o;"
-        let testData: Result<string list, string> = generateTestData testQuery02
+        let testQuery =
+            "SELECT c.name, o.due_date FROM customer c, contract o WHERE o.fk_customer = c.id;"
+        let testData: Result<string list, string> = generateTestData testQuery
         let expTestData = [
             "INSERT INTO customer (id, name) VALUES (123, 'Jane Doe');"
-            "INSERT INTO contract (id, due_date, status, fk_customer) VALUES (987, '2021-08-15', '0', 123);"
+            "INSERT INTO contract (due_date, fk_customer) VALUES ('2021-08-15', 123);"
         ]
         match testData with
         | Ok t -> Assert.That(t, Is.EquivalentTo expTestData)
         | Error e -> Assert.Fail(e)
 
+
 (*
     [<Test>]
     let TestDataGeneration2 () =
         let testQuery =
-            "SELECT c.name, o.due_date FROM customer c, contract o "
-            + "WHERE o.fk_customer = c.id AND c.id = 123 AND o.status = 'o';"
-        let testData: Result<string list, string> = generateTestData testQuery01
+            "SELECT c.name, o.due_date FROM customer c, contract o WHERE o.fk_customer = c.id;"
+        //    + " AND c.id = 123 AND o.status = 'o';" // with an additional "status" column
+        let testData: Result<string list, string> = generateTestData testQuery
         let expTestData = [
             "INSERT INTO customer (id, name) VALUES (123, 'Jane Doe');"
             "INSERT INTO contract (id, due_date, status, fk_customer) VALUES (987, '2021-08-15', '0', 123);"
