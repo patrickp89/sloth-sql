@@ -10,6 +10,11 @@ module TestDataGenerator =
         KeysAndValues: (string * string * bool) list
     }
 
+    type Column = {
+        TableNameOrAlias: string option; // TODO: use a proper sum type instead of a mere string!
+        ColName: string
+    }
+
 
     let toTableName (tableExpr: TableExpr) =
         match tableExpr with
@@ -24,16 +29,24 @@ module TestDataGenerator =
             |> List.map toTableName
 
 
-    let columnExprToColumnName ce =
+    let columnExprToColumn (tableName: string option) ce =
+         // TODO: if tableName = None and the column name is distinct => look up its table!
         match ce with
-        | NonQualifiedColumnExpr (cn) -> "" + cn // TODO: concat the (single) "global" table name!
-        | QualifiedColumnExpr (tn, cn) -> tn + "." + cn
+        | NonQualifiedColumnExpr (cn) -> {TableNameOrAlias=tableName; ColName=cn}
+        | QualifiedColumnExpr (tn, cn) -> {TableNameOrAlias=Some tn; ColName=cn}
 
 
     let filterExprToColumnNames fe =
+        // there is no "global" table name in a WHERE clause:
+        let tableName: string option = None
+
+        // extract the column(s) name(s):
         match fe with
-        | EqualsColumnExpr (c1, c2) -> seq { (columnExprToColumnName c1); (columnExprToColumnName c2) }
-        | EqualsIntExpr (c, _) -> seq { (columnExprToColumnName c) }
+        | EqualsColumnExpr (c1, c2) -> seq {
+                (columnExprToColumn tableName c1);
+                (columnExprToColumn tableName c2)
+            }
+        | EqualsIntExpr (c, _) -> seq { (columnExprToColumn tableName c) }
 
 
     /// Extracts a list of all distinct column names from a
@@ -52,33 +65,65 @@ module TestDataGenerator =
     /// Extracts a list of all distinct column names from a
     /// given "SELECT ..." clause.
     let extractSelectColumns (sc: SelectClause) =
+        // there is no "global" table name in a SELECT clause:
+        let tableName: string option = None
+
+        // extract the column(s) name(s):
         match sc with
         | Wildcard -> []
         | Columns (cols) ->
             cols
             |> Seq.ofList
-            |> Seq.map columnExprToColumnName
+            |> Seq.map (columnExprToColumn tableName)
             |> Seq.sort
             |> Seq.distinct
             |> Seq.toList
 
 
-    /// Maps a given table name to a list of triplets where each
+    /// Checks whether a given column belongs to a given table.
+    let isMatchingCol (tableName: string) (aliasesToTables: Map<string, string>) (c: Column) =
+        let matchesByName = c.TableNameOrAlias.Value = tableName
+        let alias = aliasesToTables.TryFind c.TableNameOrAlias.Value
+        let matchesByAlias =
+            alias
+            |> Option.map (fun a -> a = tableName)
+            |> Option.defaultValue false
+        matchesByName || matchesByAlias
+
+
+    let addTestValue (col: Column) =
+        // TODO: look up generated test values from a dict!
+        match col.ColName with
+        | "due_date" -> ("due_date", "2021-08-15", true)
+        | "fk_customer" -> ("fk_customer", "123", false)
+        | "id" -> ("id", "123", false)
+        | "name" -> ("name", "Jane Doe", true)
+        | _ -> raise (System.ArgumentException("Could not recognize column!"))
+
+
+    let tableNameToCols (tableName: string) (aliasesToTables: Map<string, string>) (allCols: Column list) =
+        allCols
+        |> List.filter (fun c -> c.TableNameOrAlias.IsSome)
+        |> List.filter (fun c -> isMatchingCol tableName aliasesToTables c)
+        |> List.sortBy (fun c -> c.ColName)
+        |> List.map addTestValue
+
+
+    /// Builds a map from table names to lists of triplets where each
     /// triplet corresponds to a key-value pair (plus a type flag) that
     /// will be added to the corresponding INSERT statement for this 
     /// pecific table, e.g.
     ///   "customer" -> [("id", "123", false); ("name", "Jane Doe", true)]
-    /// which will result in a statement
+    /// which will finally result in an
     ///   "INSERT INTO customer (id, name) VALUES (123, 'Jane Doe');"
-    let buildKeysAndValues () =
-        // TODO!
-        [
-            ("customer", [("id", "123", false); ("name", "Jane Doe", true)]);
-            ("contract", [("due_date", "2021-08-15", true); ("fk_customer", "123", false)])
-        ] |> Map.ofList
+    /// statement.
+    let buildTableToColsMap distinctTableNames aliasesToTables allCols =
+        distinctTableNames
+        |> List.map (fun t -> (t, tableNameToCols t aliasesToTables allCols))
+        |> Map.ofList
 
 
-    /// Creates a single test data row from a table (name).
+    /// Creates a single test data row for a given table name.
     let toTestDataRow (tableToCols: Map<string, (string * string * bool) list>) (tableName: string) =
         let keysAndValues =
             tableToCols.TryFind tableName
@@ -109,7 +154,6 @@ module TestDataGenerator =
         let fromClauseTableNames = extractTableNames fromClause
         let joinClausesTableNames = [] // TODO!
         let distinctTableNames = List.append fromClauseTableNames joinClausesTableNames
-        printf "distinct table names: %A\n" distinctTableNames
 
         // figure out all column names:
         let selectClauseCols = extractSelectColumns selectClause
@@ -120,10 +164,17 @@ module TestDataGenerator =
             |> Option.defaultValue []
         
         let allCols = List.append selectClauseCols whereClauseCols
-        printf "all column names: %A\n" allCols
+
+        let aliasesToTables = // TODO!
+            [
+                ("o", "contract");
+                ("c", "customer")
+            ] |> Map.ofList
+
+        // associate each table name with its columns:
+        let tableToCols = buildTableToColsMap distinctTableNames aliasesToTables allCols
 
         // now build a single test data row for each table:
-        let tableToCols = buildKeysAndValues ()
         distinctTableNames
         |> List.map (toTestDataRow tableToCols)
 
